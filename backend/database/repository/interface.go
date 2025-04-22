@@ -15,40 +15,55 @@ func NewStudentRepository[T any](db *gorm.DB) StudentRepository[T] {
 	return &StudentRepo[T]{db: db}
 }
 
-func (r *StudentRepo[T]) Create(item *T) (uint, error) {
+func (r *StudentRepo[T]) Create(item *T) (uuid.UUID, error) {
+	if item == nil {
+		return uuid.Nil, config.ErrMissingStudentData
+	}
+
 	// Validate data
 	value := reflect.ValueOf(item).Elem()
 
 	// Get name field and check if it's empty (AI)
 	nameField := value.FieldByName(config.StudentNameCol)
 	if !nameField.IsValid() || nameField.String() == "" {
-		return 0, config.ErrMissingStudentData
+		return uuid.Nil, config.ErrMissingStudentData
 	}
 
 	// Get subject field and check if it's empty (AI)
 	subjectField := value.FieldByName(config.StudentSubjectCol)
 	if !subjectField.IsValid() || subjectField.String() == "" {
-		return 0, config.ErrMissingStudentData
+		return uuid.Nil, config.ErrMissingStudentData
 	}
 
 	// Get grade field and check if it's zero (AI)
 	gradeField := value.FieldByName(config.StudentGradeCol)
 	if !gradeField.IsValid() || gradeField.Uint() == 0 {
-		return 0, config.ErrMissingStudentData
+		return uuid.Nil, config.ErrMissingStudentData
+	}
+
+	// Get id field and check if it's nil
+	idField := value.FieldByName(config.StudentIdCol)
+	var studentId uuid.UUID
+
+	if !idField.IsValid() || idField.Interface() == uuid.Nil {
+		studentId = uuid.New()
+
+		// Make sure the field is settable
+		if idField.IsValid() && idField.CanSet() {
+			idField.Set(reflect.ValueOf(studentId))
+		} else {
+			return uuid.Nil, fmt.Errorf("can't set ID field")
+		}
+	} else {
+		studentId = idField.Interface().(uuid.UUID)
 	}
 
 	// Create student record
 	result := r.db.Create(item)
 	if result.Error != nil {
-		return 0, result.Error
+		return uuid.Nil, result.Error
 	}
 
-	// Get student id
-	idField := value.FieldByName(config.StudentIdCol)
-
-	if !idField.IsValid() {
-		return 0, config.ErrFieldNotFound
-	}
-
-	return uint(idField.Uint()), nil
+	return studentId, nil
+}
 }

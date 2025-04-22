@@ -17,31 +17,33 @@ import (
 func TestCreate(t *testing.T) {
 	cases := []struct {
 		name          string
-		data          *model.StudentTest
+		studentData   *model.StudentTest
 		expectedError error
 	}{
 		{
-			name: "valid students data",
-			data: &model.StudentTest{Student_name: "test", Subject: "Chemistry", Grade: 20},
+			name:        "valid students data",
+			studentData: &model.StudentTest{Student_name: "test", Subject: "Chemistry", Grade: 20},
 		},
 		{
 			name:          "invalid students data, should return error",
-			data:          &model.StudentTest{Student_name: "incomplete data"},
+			studentData:   &model.StudentTest{Student_name: "incomplete data"},
+			expectedError: config.ErrMissingStudentData,
+		},
+		{
+			name:          "no students data, should return error",
+			studentData:   nil,
 			expectedError: config.ErrMissingStudentData,
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			db, err := loadDb()
+			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
+			studentId, err := studentRepo.Create(tt.studentData)
 
-			if err != nil {
-				t.Fatalf("Failed to load database : %v", err)
+			if tt.expectedError == nil && err == nil {
+				defer testDB.Delete(&model.StudentTest{}, studentId)
 			}
-
-			studentRepo := repository.NewStudentRepository[model.StudentTest](db)
-			studentId, err := studentRepo.Create(tt.data)
-			defer db.Delete(&model.StudentTest{}, studentId)
 
 			if tt.expectedError != nil {
 				require.Error(t, err)

@@ -3,27 +3,23 @@ package database
 import (
 	"errors"
 
+	"file-uploader/database/config"
 	"file-uploader/database/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-const (
-	ErrFailedDBConnection = "failed to connect to postgress db"
-	ErrFailedMigration    = "failed migration"
-)
-
 func SetupDB(dsn string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.New(postgres.Config{DSN: dsn, PreferSimpleProtocol: true}), &gorm.Config{})
 
 	if err != nil {
-		return nil, errors.New(ErrFailedDBConnection + ": " + err.Error())
+		return nil, errors.New(config.ErrFailedDBConnection.Error() + ": " + err.Error())
 	}
 
-	err = db.AutoMigrate(&model.Student{})
+	err = db.AutoMigrate(&model.Student{}, &model.StudentTest{})
 	if err != nil {
-		return nil, errors.New(ErrFailedMigration + " : " + err.Error())
+		return nil, errors.New(config.ErrFailedMigration.Error() + " : " + err.Error())
 	}
 
 	return db, nil

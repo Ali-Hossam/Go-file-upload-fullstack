@@ -1,8 +1,8 @@
 package database_test
 
 import (
-	"errors"
 	"file-uploader/database"
+	"file-uploader/database/config"
 	"os"
 	"testing"
 
@@ -10,23 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	ErrEnvVarNotFound  = "environment variable doesn't exist"
-	ErrDotEnvNotLoaded = "error loading .env file"
-
-	DBEnvVar = "DB_DSN"
-)
-
 func TestSetupDB(t *testing.T) {
 	t.Run("testing valid database dsn, should return no error", func(t *testing.T) {
 		err := godotenv.Load("../.env")
 		if err != nil {
-			assert.Error(t, errors.New(ErrDotEnvNotLoaded))
+			assert.Error(t, config.ErrDotEnvNotLoaded)
 		}
-		dsn, exist := os.LookupEnv(DBEnvVar)
+		dsn, exist := os.LookupEnv(config.DBEnvVar)
 
 		if !exist {
-			assert.Error(t, errors.New(ErrEnvVarNotFound))
+			assert.Error(t, config.ErrEnvVarNotFound)
 		}
 
 		db, err := database.SetupDB(dsn)
@@ -36,7 +29,7 @@ func TestSetupDB(t *testing.T) {
 
 	t.Run("testing invalid database dsn, should return error", func(t *testing.T) {
 		db, err := database.SetupDB("this is invalid dsn")
-		assert.ErrorContains(t, err, database.ErrFailedDBConnection)
+		assert.ErrorContains(t, err, config.ErrFailedDBConnection.Error())
 		assert.Nil(t, db)
 	})
 }

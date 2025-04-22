@@ -6,3 +6,10 @@ type Student struct {
 	Subject      string `gorm:"index"`
 	Grade        uint
 }
+
+type StudentTest struct {
+	Student_id   uint   `gorm:"primaryKey;autoIncrement"`
+	Student_name string `gorm:"index"`
+	Subject      string `gorm:"index"`
+	Grade        uint
+}

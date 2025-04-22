@@ -78,6 +78,42 @@ func TestCreate(t *testing.T) {
 	}
 }
 
+func TestCreateMany(t *testing.T) {
+	cases := []struct {
+		name          string
+		studentsData  []*model.StudentTest
+		expectedError error
+	}{
+		{
+			name: "valid students data",
+			studentsData: []*model.StudentTest{
+				{Student_name: "Omar", Subject: "Chemistry", Grade: 10},
+				{Student_name: "Ali", Subject: "Science", Grade: 20},
+				{Student_name: "Saeed", Subject: "Arabic", Grade: 30},
+			},
+		},
+		{
+			name:          "no students data, should return error",
+			expectedError: config.ErrMissingStudentData,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
+			err := studentRepo.CreateMany(tt.studentsData)
+
+			if tt.expectedError != nil {
+				require.Error(t, err)
+				assert.Equal(t, tt.expectedError.Error(), err.Error())
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func loadDb() (*gorm.DB, error) {
 	err := godotenv.Load("../../.env")
 	if err != nil {

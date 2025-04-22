@@ -66,4 +66,59 @@ func (r *StudentRepo[T]) Create(item *T) (uuid.UUID, error) {
 
 	return studentId, nil
 }
+
+func (r *StudentRepo[T]) CreateMany(items []*T) error {
+	const (
+		batchSize     = 500
+		maxConcurrent = 10
+	)
+
+	if len(items) == 0 {
+		return config.ErrMissingStudentData
+	}
+
+	// Calculate partition size for each worker
+	partitionSize := (len(items) + maxConcurrent - 1) / maxConcurrent
+
+	var wg sync.WaitGroup
+	mu := sync.Mutex{}
+	var errors []error
+
+	// Assign paritions to workers
+	for i := 0; i < maxConcurrent; i++ {
+		wg.Add(1)
+
+		go func(workerID int) {
+			defer wg.Done()
+
+			// Calculate parition slice indices
+			start := workerID * partitionSize
+			if start >= len(items) {
+				return
+			}
+
+			end := min(start+partitionSize, len(items))
+
+			parition := items[start:end]
+
+			// Process partition in batches
+			result := r.db.CreateInBatches(parition, batchSize)
+
+			if result.Error != nil {
+				mu.Lock()
+				errors = append(errors, fmt.Errorf("worker %d batch error: %w", workerID, result.Error))
+				mu.Unlock()
+				return
+			}
+
+		}(i)
+	}
+
+	wg.Wait()
+	if len(errors) > 0 {
+		return fmt.Errorf("multiple errors occured: %v", errors)
+	}
+	return nil
+}
+
 }

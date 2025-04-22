@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 
 	// Run tests
 	code := m.Run()
+	testDB.Migrator().DropTable(model.StudentTest{})
 
 	// Cleanup
 	sqlDB, _ := testDB.DB()
@@ -61,10 +62,6 @@ func TestCreate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 			studentId, err := studentRepo.Create(tt.studentData)
-
-			if tt.expectedError == nil && err == nil {
-				defer testDB.Delete(&model.StudentTest{}, studentId)
-			}
 
 			if tt.expectedError != nil {
 				require.Error(t, err)

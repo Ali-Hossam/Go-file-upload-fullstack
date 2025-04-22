@@ -2,8 +2,11 @@ package repository
 
 import (
 	"file-uploader/database/config"
+	"fmt"
 	"reflect"
+	"sync"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -121,4 +124,15 @@ func (r *StudentRepo[T]) CreateMany(items []*T) error {
 	return nil
 }
 
+func (r *StudentRepo[T]) GetByName(name string) ([]*T, error) {
+	var students []*T
+	query := fmt.Sprintf("%s = ?", config.StudentNameCol)
+	result := r.db.Where(query, name).Find(&students)
+
+	if len(students) == 0 {
+		return students, config.ErrStudentNotExist
+	}
+
+	return students, result.Error
+}
 }

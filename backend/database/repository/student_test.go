@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,8 @@ func TestMain(m *testing.M) {
 
 	// Run tests
 	code := m.Run()
+
+	// Drop table after tests
 	testDB.Migrator().DropTable(model.StudentTest{})
 
 	// Cleanup
@@ -65,7 +68,7 @@ func TestCreate(t *testing.T) {
 
 			if tt.expectedError != nil {
 				require.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
+				assert.Equal(t, tt.expectedError, err)
 				return
 			}
 
@@ -102,11 +105,49 @@ func TestCreateMany(t *testing.T) {
 
 			if tt.expectedError != nil {
 				require.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
+				assert.Equal(t, tt.expectedError, err)
 				return
 			}
 
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestGetByName(t *testing.T) {
+
+	cases := []struct {
+		name          string
+		studentsData  []*model.StudentTest
+		studentName   string
+		expectedError error
+	}{
+		{
+			name:         "get an existing student",
+			studentsData: []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: "Math", Grade: 80}},
+			studentName:  "unique_test_name",
+		},
+		{
+			name:          "get an non-existing student, should return error",
+			studentsData:  []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: "Math", Grade: 80}},
+			studentName:   "iam not here",
+			expectedError: config.ErrStudentNotExist,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
+			err := studentRepo.CreateMany(tt.studentsData)
+			require.NoError(t, err)
+
+			students, err := studentRepo.GetByName(tt.studentName)
+			if tt.expectedError != nil {
+				assert.Equal(t, tt.expectedError, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.studentsData, students)
 		})
 	}
 }

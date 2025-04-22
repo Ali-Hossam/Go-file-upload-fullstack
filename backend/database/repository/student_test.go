@@ -5,6 +5,7 @@ import (
 	"file-uploader/database/config"
 	"file-uploader/database/model"
 	"file-uploader/database/repository"
+	"log"
 	"os"
 	"testing"
 
@@ -13,6 +14,26 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
+
+var testDB *gorm.DB
+
+func TestMain(m *testing.M) {
+	db, err := loadDb()
+	if err != nil {
+		log.Fatalf("Failed to initalize test DB: %v", err)
+	}
+
+	testDB = db
+
+	// Run tests
+	code := m.Run()
+
+	// Cleanup
+	sqlDB, _ := testDB.DB()
+	sqlDB.Close()
+
+	os.Exit(code)
+}
 
 func TestCreate(t *testing.T) {
 	cases := []struct {

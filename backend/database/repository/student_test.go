@@ -351,16 +351,16 @@ func setupTestData(t *testing.T) repository.StudentRepository[model.StudentTest]
 	// Create test data - 10 students with ordered names
 	studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 	testData := []*model.StudentTest{
-		{Student_name: "Student01", Subject: "Math", Grade: 70},
-		{Student_name: "Student02", Subject: "Physics", Grade: 85},
-		{Student_name: "Student03", Subject: "Chemistry", Grade: 90},
-		{Student_name: "Student04", Subject: "Biology", Grade: 75},
-		{Student_name: "Student05", Subject: "History", Grade: 80},
-		{Student_name: "Student06", Subject: "Geography", Grade: 65},
-		{Student_name: "Student07", Subject: "Art", Grade: 95},
-		{Student_name: "Student08", Subject: "Music", Grade: 88},
-		{Student_name: "Student09", Subject: "PE", Grade: 92},
-		{Student_name: "Student10", Subject: "Computer Science", Grade: 98},
+		{Student_name: "Student01", Subject: string(config.Mathematics), Grade: 70},
+		{Student_name: "Student02", Subject: string(config.Physics), Grade: 85},
+		{Student_name: "Student03", Subject: string(config.Chemistry), Grade: 90},
+		{Student_name: "Student04", Subject: string(config.Biology), Grade: 75},
+		{Student_name: "Student05", Subject: string(config.History), Grade: 80},
+		{Student_name: "Student06", Subject: string(config.Geography), Grade: 65},
+		{Student_name: "Student07", Subject: string(config.Art), Grade: 95},
+		{Student_name: "Student08", Subject: string(config.Music), Grade: 88},
+		{Student_name: "Student09", Subject: string(config.EnglishLit), Grade: 92},
+		{Student_name: "Student10", Subject: string(config.CompSci), Grade: 98},
 	}
 	err := studentRepo.CreateMany(testData)
 	require.NoError(t, err, "Failed to create test data")

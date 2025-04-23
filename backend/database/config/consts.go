@@ -2,6 +2,7 @@ package config
 
 type StudentCol string
 type SortOrder string
+type Course string
 
 const (
 	DBEnvVar = "DB_DSN"
@@ -13,4 +14,15 @@ const (
 
 	SortAsc  SortOrder = "asc"
 	SortDesc SortOrder = "desc"
+
+	Mathematics Course = "Mathematics"
+	Physics     Course = "Physics"
+	Chemistry   Course = "Chemistry"
+	Biology     Course = "Biology"
+	History     Course = "History"
+	EnglishLit  Course = "English Literature"
+	CompSci     Course = "Computer Science"
+	Art         Course = "Art"
+	Music       Course = "Music"
+	Geography   Course = "Geography"
 )

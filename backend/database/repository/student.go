@@ -12,5 +12,5 @@ type StudentRepository[T any] interface {
 	GetByName(name string) ([]*T, error)
 	GetAll(sortedBy config.StudentCol, sortOrder config.SortOrder, pageNumber, pageSize int) ([]*T, error)
 	Delete(id uint) error
-	FilterBySubject(subject string) ([]T, error)
+	FilterBySubject(subject config.Course, pageNumber int, pageSize int) ([]*T, error)
 }

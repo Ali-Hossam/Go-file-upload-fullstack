@@ -47,7 +47,7 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:        "valid students data",
-			studentData: &model.StudentTest{Student_name: "test", Subject: "Chemistry", Grade: 20},
+			studentData: &model.StudentTest{Student_name: "test", Subject: string(config.Chemistry), Grade: 20},
 		},
 		{
 			name:          "invalid students data, should return error",
@@ -87,9 +87,9 @@ func TestCreateMany(t *testing.T) {
 		{
 			name: "valid students data",
 			studentsData: []*model.StudentTest{
-				{Student_name: "Omar", Subject: "Chemistry", Grade: 10},
-				{Student_name: "Ali", Subject: "Science", Grade: 20},
-				{Student_name: "Saeed", Subject: "Arabic", Grade: 30},
+				{Student_name: "Omar", Subject: string(config.Chemistry), Grade: 10},
+				{Student_name: "Ali", Subject: string(config.CompSci), Grade: 20},
+				{Student_name: "Saeed", Subject: string(config.EnglishLit), Grade: 30},
 			},
 		},
 		{
@@ -123,12 +123,12 @@ func TestGetByName(t *testing.T) {
 	}{
 		{
 			name:         "get an existing student",
-			studentsData: []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: "Math", Grade: 80}},
+			studentsData: []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: string(config.Mathematics), Grade: 80}},
 			studentName:  "unique_test_name",
 		},
 		{
 			name:          "get an non-existing student, should return error",
-			studentsData:  []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: "Math", Grade: 80}},
+			studentsData:  []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: string(config.Mathematics), Grade: 80}},
 			studentName:   "iam not here",
 			expectedError: config.ErrStudentNotExist,
 		},
@@ -231,17 +231,17 @@ func TestGetAllPagination(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Get the specified page
 			students, err := studentRepo.GetAll(tc.sortBy, tc.sortOrder, tc.pageNumber, tc.pageSize)
-			assert.NoError(t, err, "GetAll should not return an error")
+			assert.NoError(t, err)
 
 			// Check page size
-			assert.Len(t, students, tc.expectedCount, "Page should have the correct number of items")
+			assert.Len(t, students, tc.expectedCount)
 
 			// Check student names in the page
 			names := make([]string, len(students))
 			for i, student := range students {
 				names[i] = student.Student_name
 			}
-			assert.Equal(t, tc.expectedNames, names, "Page should contain the expected student names in the correct order")
+			assert.Equal(t, tc.expectedNames, names)
 		})
 	}
 }
@@ -276,7 +276,7 @@ func TestGetAll(t *testing.T) {
 		},
 		{
 			name:          "get all data sorted by subject desc",
-			expectedNames: []string{"Student02", "Student09", "Student08", "Student01", "Student05", "Student06", "Student10", "Student03", "Student04", "Student07"},
+			expectedNames: []string{"Student02", "Student08", "Student01", "Student05", "Student06", "Student09", "Student10", "Student03", "Student04", "Student07"},
 			expectedCount: 10,
 			sortBy:        config.Subject,
 			sortOrder:     config.SortDesc,
@@ -324,6 +324,71 @@ func TestGetAll(t *testing.T) {
 	}
 }
 
+func TestFilterBySubject(t *testing.T) {
+	studentRepo := setupTestData(t)
+
+	testCases := []struct {
+		name          string
+		subject       config.Course
+		pageNumber    int
+		pageSize      int
+		expectedCount int
+		expectedNames []string
+	}{
+		{
+			name:          "filter by Mathematics",
+			subject:       config.Mathematics,
+			pageNumber:    1,
+			pageSize:      10,
+			expectedCount: 1,
+			expectedNames: []string{"Student01"},
+		},
+		{
+			name:          "filter by EnglishLit",
+			subject:       config.EnglishLit,
+			pageNumber:    1,
+			pageSize:      10,
+			expectedCount: 1,
+			expectedNames: []string{"Student09"},
+		},
+		{
+			name:          "filter by Physics with pagination",
+			subject:       config.Physics,
+			pageNumber:    1,
+			pageSize:      1,
+			expectedCount: 1,
+			expectedNames: []string{"Student02"},
+		},
+		{
+			name:          "filter by non-existing subject",
+			subject:       config.Course("Non-Existing"),
+			pageNumber:    1,
+			pageSize:      10,
+			expectedCount: 0,
+			expectedNames: []string{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			students, err := studentRepo.FilterBySubject(tc.subject, tc.pageNumber, tc.pageSize)
+			assert.NoError(t, err)
+
+			// Check result count
+			assert.Len(t, students, tc.expectedCount)
+
+			// Extract names for comparison
+			names := make([]string, len(students))
+			for i, student := range students {
+				names[i] = student.Student_name
+			}
+
+			// Check student names in results
+			assert.ElementsMatch(t, tc.expectedNames, names)
+		})
+	}
+}
+
 func loadDb() (*gorm.DB, error) {
 	err := godotenv.Load("../../.env")
 	if err != nil {
@@ -343,7 +408,7 @@ func loadDb() (*gorm.DB, error) {
 	return db, nil
 }
 
-// Setup for pagination tests [AI]
+// [AI]
 func setupTestData(t *testing.T) repository.StudentRepository[model.StudentTest] {
 	// Clear any previous test data
 	testDB.Where("1=1").Delete(&model.StudentTest{})

@@ -159,10 +159,19 @@ func (r *StudentRepo[T]) GetAll(sortedBy config.StudentCol,
 	return students, result.Error
 }
 
-func (r *StudentRepo[T]) Delete(id uint) error {
-	return nil
+func (r *StudentRepo[T]) FilterBySubject(subject config.Course, pageNumber int, pageSize int) ([]*T, error) {
+	var students []*T
+	db := r.db
+
+	if pageNumber > 0 && pageSize > 0 {
+		db = db.Limit(pageSize).Offset((pageNumber - 1) * pageSize)
+	}
+
+	result := db.Where(string(config.Subject)+" = ?", subject).Find(&students)
+
+	return students, result.Error
 }
 
-func (r *StudentRepo[T]) FilterBySubject(subject string) ([]T, error) {
-	return nil, nil
+func (r *StudentRepo[T]) Delete(id uint) error {
+	return nil
 }

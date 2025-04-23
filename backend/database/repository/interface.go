@@ -27,25 +27,25 @@ func (r *StudentRepo[T]) Create(item *T) (uuid.UUID, error) {
 	value := reflect.ValueOf(item).Elem()
 
 	// Get name field and check if it's empty (AI)
-	nameField := value.FieldByName(config.StudentNameCol)
+	nameField := value.FieldByName(string(config.Name))
 	if !nameField.IsValid() || nameField.String() == "" {
 		return uuid.Nil, config.ErrMissingStudentData
 	}
 
 	// Get subject field and check if it's empty (AI)
-	subjectField := value.FieldByName(config.StudentSubjectCol)
+	subjectField := value.FieldByName(string(config.Subject))
 	if !subjectField.IsValid() || subjectField.String() == "" {
 		return uuid.Nil, config.ErrMissingStudentData
 	}
 
 	// Get grade field and check if it's zero (AI)
-	gradeField := value.FieldByName(config.StudentGradeCol)
+	gradeField := value.FieldByName(string(config.Grade))
 	if !gradeField.IsValid() || gradeField.Uint() == 0 {
 		return uuid.Nil, config.ErrMissingStudentData
 	}
 
 	// Get id field and check if it's nil
-	idField := value.FieldByName(config.StudentIdCol)
+	idField := value.FieldByName(string(config.Id))
 	var studentId uuid.UUID
 
 	if !idField.IsValid() || idField.Interface() == uuid.Nil {

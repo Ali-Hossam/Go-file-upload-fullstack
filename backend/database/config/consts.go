@@ -1,10 +1,16 @@
 package config
 
+type StudentCol string
+type SortOrder string
+
 const (
 	DBEnvVar = "DB_DSN"
 
-	StudentIdCol      = "Student_id"
-	StudentNameCol    = "Student_name"
-	StudentSubjectCol = "Subject"
-	StudentGradeCol   = "Grade"
+	Id      StudentCol = "Student_id"
+	Name    StudentCol = "Student_name"
+	Subject StudentCol = "Subject"
+	Grade   StudentCol = "Grade"
+
+	SortAsc  SortOrder = "asc"
+	SortDesc SortOrder = "desc"
 )

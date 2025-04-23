@@ -9,4 +9,5 @@ var (
 	ErrDotEnvNotLoaded    = errors.New("error loading .env file")
 	ErrFieldNotFound      = errors.New("field not found")
 	ErrMissingStudentData = errors.New("student data are missing, required name, subject and grade")
+	ErrStudentNotExist    = errors.New("student does not exist")
 )

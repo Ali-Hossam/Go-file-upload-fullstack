@@ -135,4 +135,35 @@ func (r *StudentRepo[T]) GetByName(name string) ([]*T, error) {
 
 	return students, result.Error
 }
+
+func (r *StudentRepo[T]) GetAll(sortedBy config.StudentCol,
+	sortOrder config.SortOrder,
+	pageNumber int,
+	pageSize int) ([]*T, error) {
+
+	var students []*T
+	db := r.db
+
+	// Apply sorting if specified
+	if sortedBy != "" {
+		query := fmt.Sprintf("%s %s", sortedBy, sortOrder)
+		db = db.Order(query)
+	}
+
+	// Apply pagination
+	if pageNumber > 0 && pageSize > 0 {
+		db = db.Limit(pageSize).Offset((pageNumber - 1) * pageSize)
+	}
+
+	// Execute query
+	result := db.Find(&students)
+	return students, result.Error
+}
+
+func (r *StudentRepo[T]) Delete(id uint) error {
+	return nil
+}
+
+func (r *StudentRepo[T]) FilterBySubject(subject string) ([]T, error) {
+	return nil, nil
 }

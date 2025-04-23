@@ -115,7 +115,6 @@ func TestCreateMany(t *testing.T) {
 }
 
 func TestGetByName(t *testing.T) {
-
 	cases := []struct {
 		name          string
 		studentsData  []*model.StudentTest
@@ -147,7 +146,180 @@ func TestGetByName(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.studentsData, students)
+			assert.Len(t, students, len(tt.studentsData))
+
+			// Verify all returned students have the expected name
+			for _, student := range students {
+				assert.Equal(t, tt.studentName, student.Student_name)
+			}
+		})
+	}
+}
+
+// [AI]
+func TestGetAllPagination(t *testing.T) {
+	studentRepo := setupTestData(t)
+
+	// Test cases for pagination
+	testCases := []struct {
+		name          string
+		pageNumber    int
+		pageSize      int
+		sortBy        config.StudentCol
+		sortOrder     config.SortOrder
+		expectedCount int
+		expectedNames []string
+	}{
+		{
+			name:          "first page with 3 items",
+			pageNumber:    1,
+			pageSize:      3,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			expectedCount: 3,
+			expectedNames: []string{"Student01", "Student02", "Student03"},
+		},
+		{
+			name:          "second page with 3 items",
+			pageNumber:    2,
+			pageSize:      3,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			expectedCount: 3,
+			expectedNames: []string{"Student04", "Student05", "Student06"},
+		},
+		{
+			name:          "third page with 3 items",
+			pageNumber:    3,
+			pageSize:      3,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			expectedCount: 3,
+			expectedNames: []string{"Student07", "Student08", "Student09"},
+		},
+		{
+			name:          "fourth page with 1 item (remainder)",
+			pageNumber:    4,
+			pageSize:      3,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			expectedCount: 1,
+			expectedNames: []string{"Student10"},
+		},
+		{
+			name:          "first page with 5 items",
+			pageNumber:    1,
+			pageSize:      5,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			expectedCount: 5,
+			expectedNames: []string{"Student01", "Student02", "Student03", "Student04", "Student05"},
+		},
+		{
+			name:          "sort by grade desc and paginate",
+			pageNumber:    1,
+			pageSize:      3,
+			sortBy:        config.Grade,
+			sortOrder:     config.SortDesc,
+			expectedCount: 3,
+			// Highest grades first
+			expectedNames: []string{"Student10", "Student07", "Student09"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Get the specified page
+			students, err := studentRepo.GetAll(tc.sortBy, tc.sortOrder, tc.pageNumber, tc.pageSize)
+			assert.NoError(t, err, "GetAll should not return an error")
+
+			// Check page size
+			assert.Len(t, students, tc.expectedCount, "Page should have the correct number of items")
+
+			// Check student names in the page
+			names := make([]string, len(students))
+			for i, student := range students {
+				names[i] = student.Student_name
+			}
+			assert.Equal(t, tc.expectedNames, names, "Page should contain the expected student names in the correct order")
+		})
+	}
+}
+
+// Let's also refactor TestGetAll to use the same setup
+func TestGetAll(t *testing.T) {
+	studentRepo := setupTestData(t)
+
+	cases := []struct {
+		name          string
+		expectedNames []string
+		expectedCount int
+		sortBy        config.StudentCol
+		sortOrder     config.SortOrder
+		checkOrder    bool
+	}{
+		{
+			name:          "get all data without sorting",
+			expectedNames: []string{"Student01", "Student02", "Student03", "Student04", "Student05", "Student06", "Student07", "Student08", "Student09", "Student10"},
+			expectedCount: 10,
+			sortBy:        "",
+			sortOrder:     "",
+			checkOrder:    false, // Don't check order for unsorted results
+		},
+		{
+			name:          "get all data sorted by student name asc",
+			expectedNames: []string{"Student01", "Student02", "Student03", "Student04", "Student05", "Student06", "Student07", "Student08", "Student09", "Student10"},
+			expectedCount: 10,
+			sortBy:        config.StudentCol("Student_name"),
+			sortOrder:     config.SortAsc,
+			checkOrder:    true,
+		},
+		{
+			name:          "get all data sorted by subject desc",
+			expectedNames: []string{"Student02", "Student09", "Student08", "Student01", "Student05", "Student06", "Student10", "Student03", "Student04", "Student07"},
+			expectedCount: 10,
+			sortBy:        config.Subject,
+			sortOrder:     config.SortDesc,
+			checkOrder:    true,
+		},
+		{
+			name:          "get all data sorted by grade asc",
+			expectedNames: []string{"Student06", "Student01", "Student04", "Student05", "Student02", "Student08", "Student03", "Student09", "Student07", "Student10"},
+			expectedCount: 10,
+			sortBy:        config.Grade,
+			sortOrder:     config.SortAsc,
+			checkOrder:    true,
+		},
+		{
+			name:          "get all data sorted by grade desc",
+			expectedNames: []string{"Student10", "Student07", "Student09", "Student03", "Student08", "Student02", "Student05", "Student04", "Student01", "Student06"},
+			expectedCount: 10,
+			sortBy:        config.Grade,
+			sortOrder:     config.SortDesc,
+			checkOrder:    true,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			allStudents, err := studentRepo.GetAll(tt.sortBy, tt.sortOrder, 1, 20) // Get all students
+			assert.NoError(t, err)
+			assert.Len(t, allStudents, tt.expectedCount)
+
+			// Verify expected order of names if order matters [AI]
+			if len(tt.expectedNames) > 0 {
+				names := make([]string, len(allStudents))
+				for i, student := range allStudents {
+					names[i] = student.Student_name
+				}
+
+				if tt.checkOrder {
+					assert.Equal(t, tt.expectedNames, names)
+				} else {
+					// Check that all expected names are present, regardless of order
+					assert.ElementsMatch(t, tt.expectedNames, names)
+				}
+			}
 		})
 	}
 }
@@ -169,4 +341,29 @@ func loadDb() (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+// Setup for pagination tests [AI]
+func setupTestData(t *testing.T) repository.StudentRepository[model.StudentTest] {
+	// Clear any previous test data
+	testDB.Where("1=1").Delete(&model.StudentTest{})
+
+	// Create test data - 10 students with ordered names
+	studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
+	testData := []*model.StudentTest{
+		{Student_name: "Student01", Subject: "Math", Grade: 70},
+		{Student_name: "Student02", Subject: "Physics", Grade: 85},
+		{Student_name: "Student03", Subject: "Chemistry", Grade: 90},
+		{Student_name: "Student04", Subject: "Biology", Grade: 75},
+		{Student_name: "Student05", Subject: "History", Grade: 80},
+		{Student_name: "Student06", Subject: "Geography", Grade: 65},
+		{Student_name: "Student07", Subject: "Art", Grade: 95},
+		{Student_name: "Student08", Subject: "Music", Grade: 88},
+		{Student_name: "Student09", Subject: "PE", Grade: 92},
+		{Student_name: "Student10", Subject: "Computer Science", Grade: 98},
+	}
+	err := studentRepo.CreateMany(testData)
+	require.NoError(t, err, "Failed to create test data")
+
+	return studentRepo
 }

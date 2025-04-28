@@ -10,19 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(e *echo.Echo, db *gorm.DB) {
-	// Create repositories
-	studentRepo := repository.NewStudentRepository[model.Student](db)
+func RegisterRoutes(e *echo.Echo, db *gorm.DB, studentsRepo repository.StudentRepository[model.Student]) {
 
 	// Create handlers
-	uploadHandler := upload.NewUploadHandler(&studentRepo)
-	studentsHandler := students.NewHandler[model.Student](studentRepo)
+	uploadHandler := upload.NewUploadHandler(&studentsRepo)
+	studentsHandler := students.NewHandler[model.Student](studentsRepo)
 
 	// Register routes
 	apiGroup := e.Group("/api")
 	apiGroup.POST("/upload", uploadHandler.Handle)
 
 	apiGroup.GET("/students", studentsHandler.GetAll)
-	apiGroup.GET("/students/:name", studentsHandler.GetByName)
-	apiGroup.GET("/students/:subject", studentsHandler.FilterBySubject)
+	apiGroup.GET("/students/name/:name", studentsHandler.GetByName)
+	apiGroup.GET("/students/subject/:subject", studentsHandler.FilterBySubject)
 }

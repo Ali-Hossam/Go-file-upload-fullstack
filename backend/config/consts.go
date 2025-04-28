@@ -5,7 +5,8 @@ type SortOrder string
 type Course string
 
 const (
-	DBEnvVar = "DB_DSN"
+	DBEnvVar   = "DB_DSN"
+	PortEnvVar = "SERVER_PORT"
 
 	Id      StudentCol = "Student_id"
 	Name    StudentCol = "Student_name"

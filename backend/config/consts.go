@@ -25,4 +25,6 @@ const (
 	Art         Course = "Art"
 	Music       Course = "Music"
 	Geography   Course = "Geography"
+
+	StudentsTableHeader = string(Id) + "," + string(Name) + "," + string(Subject) + "," + string(Grade)
 )

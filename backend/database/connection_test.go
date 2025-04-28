@@ -1,8 +1,9 @@
 package database_test
 
 import (
+	"file-uploader/config"
 	"file-uploader/database"
-	"file-uploader/database/config"
+	"file-uploader/database/model"
 	"os"
 	"testing"
 
@@ -22,14 +23,16 @@ func TestSetupDB(t *testing.T) {
 			assert.Error(t, config.ErrEnvVarNotFound)
 		}
 
-		db, err := database.SetupDB(dsn)
+		db, repo, err := database.SetupDB[model.StudentTest](dsn, true)
 		assert.NoError(t, err)
 		assert.NotNil(t, db)
+		assert.NotNil(t, repo)
 	})
 
 	t.Run("testing invalid database dsn, should return error", func(t *testing.T) {
-		db, err := database.SetupDB("this is invalid dsn")
+		db, repo, err := database.SetupDB[model.StudentTest]("this is invalid dsn", true)
 		assert.ErrorContains(t, err, config.ErrFailedDBConnection.Error())
 		assert.Nil(t, db)
+		assert.Nil(t, repo)
 	})
 }

@@ -126,7 +126,7 @@ func (r *StudentRepo[T]) CreateMany(items []*T) error {
 
 func (r *StudentRepo[T]) GetByName(name string) ([]*T, error) {
 	var students []*T
-	result := r.db.Where(string(config.Name)+" = ?", name).Find(&students)
+	result := r.db.Where(string(config.Name)+" ILIKE ?", name+"%").Find(&students)
 
 	if len(students) == 0 {
 		return students, config.ErrStudentNotExist

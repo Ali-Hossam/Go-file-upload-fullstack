@@ -1,10 +1,10 @@
 package repository_test
 
 import (
-	"file-uploader/database"
-	"file-uploader/database/config"
+	"file-uploader/config"
 	"file-uploader/database/model"
 	"file-uploader/database/repository"
+	testutils "file-uploader/internal/test-utils"
 	"log"
 	"os"
 	"testing"
@@ -17,14 +17,21 @@ import (
 )
 
 var testDB *gorm.DB
+var studentRepo repository.StudentRepository[model.StudentTest]
 
 func TestMain(m *testing.M) {
-	db, err := loadDb()
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		log.Fatalf("Failed to load .env file: %v", err)
+	}
+
+	db, repo, err := testutils.LoadDb()
 	if err != nil {
 		log.Fatalf("Failed to initalize test DB: %v", err)
 	}
 
 	testDB = db
+	studentRepo = repo
 
 	// Run tests
 	code := m.Run()
@@ -63,7 +70,6 @@ func TestCreate(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 			studentId, err := studentRepo.Create(tt.studentData)
 
 			if tt.expectedError != nil {
@@ -100,7 +106,6 @@ func TestCreateMany(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 			err := studentRepo.CreateMany(tt.studentsData)
 
 			if tt.expectedError != nil {
@@ -127,16 +132,22 @@ func TestGetByName(t *testing.T) {
 			studentName:  "unique_test_name",
 		},
 		{
-			name:          "get an non-existing student, should return error",
+			name:          "get a non-existing student, should return error",
 			studentsData:  []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: string(config.Mathematics), Grade: 80}},
 			studentName:   "iam not here",
 			expectedError: config.ErrStudentNotExist,
+		},
+		{
+			name: "get multiple students with the same name",
+			studentsData: []*model.StudentTest{
+				{Student_id: uuid.New(), Student_name: "my name is test", Subject: string(config.Mathematics), Grade: 80},
+				{Student_id: uuid.New(), Student_name: "my name is test", Subject: string(config.CompSci), Grade: 90}},
+			studentName: "my name is test",
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 			err := studentRepo.CreateMany(tt.studentsData)
 			require.NoError(t, err)
 
@@ -158,7 +169,7 @@ func TestGetByName(t *testing.T) {
 
 // [AI]
 func TestGetAllPagination(t *testing.T) {
-	studentRepo := setupTestData(t)
+	setupTestData(t)
 
 	// Test cases for pagination
 	testCases := []struct {
@@ -248,7 +259,7 @@ func TestGetAllPagination(t *testing.T) {
 
 // Let's also refactor TestGetAll to use the same setup
 func TestGetAll(t *testing.T) {
-	studentRepo := setupTestData(t)
+	setupTestData(t)
 
 	cases := []struct {
 		name          string
@@ -325,7 +336,7 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestFilterBySubject(t *testing.T) {
-	studentRepo := setupTestData(t)
+	setupTestData(t)
 
 	testCases := []struct {
 		name          string
@@ -389,32 +400,12 @@ func TestFilterBySubject(t *testing.T) {
 	}
 }
 
-func loadDb() (*gorm.DB, error) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		return nil, err
-	}
-	dsn, exist := os.LookupEnv(config.DBEnvVar)
-
-	if !exist {
-		return nil, config.ErrEnvVarNotFound
-	}
-
-	db, err := database.SetupDB(dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
 // [AI]
 func setupTestData(t *testing.T) repository.StudentRepository[model.StudentTest] {
 	// Clear any previous test data
 	testDB.Where("1=1").Delete(&model.StudentTest{})
 
 	// Create test data - 10 students with ordered names
-	studentRepo := repository.NewStudentRepository[model.StudentTest](testDB)
 	testData := []*model.StudentTest{
 		{Student_name: "Student01", Subject: string(config.Mathematics), Grade: 70},
 		{Student_name: "Student02", Subject: string(config.Physics), Grade: 85},

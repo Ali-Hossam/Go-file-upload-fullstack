@@ -1,58 +1,51 @@
 package upload
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"file-uploader/config"
 	"file-uploader/database/model"
 	"file-uploader/database/repository"
 	processor "file-uploader/internal/service/csv"
-	"log"
-	"mime/multipart"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
 
-var wsUpgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // allow all connections
-	},
-}
-
 type UploadHandler struct {
-	repo *repository.StudentRepository[model.Student]
+	repo           *repository.StudentRepository[model.Student]
+	statusChannels map[uuid.UUID]chan processor.ProcessStatus
+	mu             sync.Mutex
 }
 
 func NewUploadHandler(repo *repository.StudentRepository[model.Student]) *UploadHandler {
 	return &UploadHandler{
-		repo: repo,
+		repo:           repo,
+		statusChannels: make(map[uuid.UUID]chan processor.ProcessStatus),
 	}
 }
 
 // UploadHandler handles file uploads with websocket support
-func (uh *UploadHandler) Handle(c echo.Context) error {
-	ws, err := wsUpgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-	defer ws.Close()
+func (uh *UploadHandler) HandleFileUpload(c echo.Context) error {
+	ctx := c.Request().Context()
 
-	return processUpload(c, ws, *uh.repo, processor.StudentMapper)
-}
+	uploadID := uuid.New()
 
-// Generic processUpload function that works with both Student and StudentTest models
-func processUpload[T any](c echo.Context, ws *websocket.Conn, studentRepo repository.StudentRepository[T], mapper func([]string) (*T, error)) error {
-	const (
-		batchSize             = 1000
-		maxNumberOfGoRoutines = 10
-	)
+	// Create status channel for this upload
+	uh.mu.Lock()
+	statusChan := make(chan processor.ProcessStatus)
+	uh.statusChannels[uploadID] = statusChan
+	uh.mu.Unlock()
 
+	// Extract necessary data from the request
 	form, err := c.MultipartForm()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, config.ErrFormParseFailureHttp)
@@ -63,121 +56,218 @@ func processUpload[T any](c echo.Context, ws *websocket.Conn, studentRepo reposi
 		return echo.NewHTTPError(http.StatusBadRequest, config.ErrNoFilesProvidedHttp)
 	}
 
-	err = validateCSVType(files)
+	// Save templ files
+	var tempFiles []*os.File
+
+	for _, fh := range files {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		src, err := fh.Open()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		defer src.Close()
+
+		tmp, err := os.CreateTemp("", "upload-*.csv")
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		if _, err := io.Copy(tmp, src); err != nil {
+			tmp.Close()
+			os.Remove(tmp.Name())
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		tmp.Seek(0, io.SeekStart)
+		tempFiles = append(tempFiles, tmp)
+	}
+
+	// Process file in the background
+	go func(tempFiles []*os.File, uploadID uuid.UUID) {
+		// Create a new background context that won't be canceled when the HTTP request ends
+		bgCtx := context.Background()
+
+		// Reclean temp files to ensure they are closed and removed
+		defer func() {
+			for _, f := range tempFiles {
+				f.Close()
+				os.Remove(f.Name())
+			}
+		}()
+
+		err = ValidateCSVFiles(tempFiles)
+		if err != nil {
+			statusChan <- processor.ProcessStatus{Error: err.Error()}
+			return
+		}
+
+		err = ValidateCSVHeader(tempFiles)
+		if err != nil {
+			statusChan <- processor.ProcessStatus{Error: err.Error()}
+			return
+		}
+
+		ProcessFiles(bgCtx, tempFiles, uh.statusChannels[uploadID], *uh.repo, processor.StudentMapper)
+
+	}(tempFiles, uploadID)
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"upload_id": uploadID.String(),
+	})
+}
+
+func (uh *UploadHandler) HandleStatusUpdates(c echo.Context) error {
+	uploadID, err := uuid.Parse(c.Param("uploadID"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = validateHeader(files)
+	wsUpgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	ws, err := wsUpgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	defer ws.Close()
+
+	uh.mu.Lock()
+	statusChan, exists := uh.statusChannels[uploadID]
+	uh.mu.Unlock()
+
+	if !exists {
+		return echo.NewHTTPError(http.StatusNotFound, "upload ID not found")
 	}
 
-	var sem = make(chan struct{}, min(maxNumberOfGoRoutines, len(files))) // limit number of goroutines
-	var status = make(chan processor.ProcessStatus)
+	// Send an initial ping so the client sees activity
+	if err := ws.WriteJSON(processor.ProcessStatus{Percent: 0}); err != nil {
+		return nil
+	}
 
-	var wg sync.WaitGroup
-	var statusWg sync.WaitGroup
-
-	// Start a separate goroutine to handle status messages
-	statusWg.Add(1)
+	// Use a separate done channel to detect client disconnection
+	clientClosed := make(chan struct{})
 	go func() {
-		defer statusWg.Done()
-		for st := range status {
-			if ws != nil {
-				err := ws.WriteJSON(st)
-				if err != nil {
-					log.Println("Websocket Write error:", err)
-					break
-				}
-				log.Println(st)
+		// Read loop - waits for any sign that the browser disconnected
+		for {
+			_, _, err := ws.ReadMessage()
+			if err != nil {
+				close(clientClosed)
+				return
 			}
 		}
 	}()
 
-	for i, file := range files {
-
-		wg.Add(1)
-		go func(i int, file *multipart.FileHeader) {
-			defer wg.Done()
-			src, err := file.Open()
-			if err != nil {
-				log.Printf("file open error: %v", err)
-				return
+	processComplete := false
+	for {
+		select {
+		case status, ok := <-statusChan:
+			if !ok {
+				// Channel closed, processing is complete
+				processComplete = true
+				goto cleanup
 			}
-			defer src.Close()
 
+			// Try to send the status update
+			err := ws.WriteJSON(status)
+			if err != nil {
+				// The connection might be closed, but we'll keep processing
+				goto cleanup
+			}
+
+		case <-clientClosed:
+			// The client disconnected, but we don't mark processing as complete
+			goto cleanup
+		}
+	}
+
+cleanup:
+	// Only clean up the channel if processing is complete (to avoid breaking other listeners)
+	if processComplete {
+		uh.mu.Lock()
+		delete(uh.statusChannels, uploadID)
+		uh.mu.Unlock()
+	}
+	return nil
+}
+
+func ProcessFiles[T any](
+	ctx context.Context,
+	files []*os.File,
+	statusChannel chan processor.ProcessStatus,
+	studentRepo repository.StudentRepository[T],
+	mapper func([]string) (*T, error),
+) {
+	defer close(statusChannel)
+	const (
+		batchSize             = 2000
+		maxNumberOfGoRoutines = 10
+	)
+
+	var sem = make(chan struct{}, min(maxNumberOfGoRoutines, len(files))) // limit number of goroutines
+
+	var wg sync.WaitGroup
+
+	for i, file := range files {
+		wg.Add(1)
+		go func(i int, file *os.File) {
+			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			processor.ProcessCSV(
+			file.Seek(0, io.SeekStart)
+			fileInfo, err := file.Stat()
+			if err != nil {
+				statusChannel <- processor.ProcessStatus{Id: i, Error: fmt.Sprintf("Error getting file info: %v", err)}
+				return
+			}
+
+			err = processor.ProcessCSV(
+				ctx,
 				i,
-				src,
-				file.Size,
+				file,
+				fileInfo.Size(),
 				batchSize,
 				studentRepo,
 				mapper,
-				status,
+				statusChannel,
 			)
+			if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+				statusChannel <- processor.ProcessStatus{Id: i, Percent: 0, Error: fmt.Sprintf("Processing failed: %v", err)}
+			}
 		}(i, file)
 	}
 
 	wg.Wait()
-	close(status)
-	statusWg.Wait()
-
-	return c.JSON(http.StatusOK, map[string]any{
-		"message": "Files processed",
-	})
 }
 
-// UploadHandlerWithoutWebsocket is used for testing
-func UploadHandlerWithoutWebsocket(c echo.Context, repo repository.StudentRepository[model.StudentTest]) error {
-	return processUpload(c, nil, repo, processor.StudentTestMapper)
-}
+func ValidateCSVFiles(files []*os.File) error {
+	for _, f := range files {
+		buf := make([]byte, 512)
+		n, _ := f.Read(buf)
+		f.Seek(0, io.SeekStart)
 
-func validateCSVType(files []*multipart.FileHeader) error {
-	invalidFiles := make([]string, 0, len(files))
-	for _, file := range files {
-		mimeType := file.Header.Get("Content-Type")
-		log.Print(mimeType)
-		if mimeType != "text/csv" && mimeType != "application/vnd.ms-excel" {
-			invalidFiles = append(invalidFiles, file.Filename)
+		contentType := http.DetectContentType(buf[:n])
+		if !strings.Contains(contentType, "csv") && !strings.Contains(contentType, "text/plain") {
+			return fmt.Errorf("invalid content type: %s", contentType)
 		}
 	}
-
-	if len(invalidFiles) > 0 {
-		errMsg := config.ErrInvalidFileTypeHttp + " : " + strings.Join(invalidFiles, ",")
-		return errors.New(errMsg)
-	}
-
 	return nil
 }
 
-func validateHeader(files []*multipart.FileHeader) error {
-	invalidFiles := make([]string, 0, len(files))
-
-	for _, fh := range files {
-		file, err := fh.Open()
+func ValidateCSVHeader(files []*os.File) error {
+	for _, f := range files {
+		f.Seek(0, io.SeekStart)
+		reader := csv.NewReader(f)
+		header, err := reader.Read()
 		if err != nil {
 			return err
 		}
-
-		reader := csv.NewReader(file)
-		headerRow, err := reader.Read()
-		file.Close()
-		if err != nil {
-			return err
-		}
-		if strings.Join(headerRow, ",") != config.StudentsTableHeader {
-			invalidFiles = append(invalidFiles, fh.Filename)
+		if strings.Join(header, ",") != config.StudentsTableHeader {
+			return errors.New("invalid CSV header")
 		}
 	}
-
-	if len(invalidFiles) > 0 {
-		errMsg := config.ErrInvalidCSVCols + " : " + strings.Join(invalidFiles, ",")
-		return errors.New(errMsg)
-	}
-
 	return nil
 }

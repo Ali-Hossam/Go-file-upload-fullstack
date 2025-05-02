@@ -1,24 +1,18 @@
 package upload_test
 
 import (
-	"bytes"
-	"file-uploader/config"
+	"context"
 	"file-uploader/database/model"
 	"file-uploader/database/repository"
 	"file-uploader/internal/api/handler/upload"
+	processor "file-uploader/internal/service/csv"
 	testutils "file-uploader/internal/test-utils"
-	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
-	"net/http"
-	"net/http/httptest"
-	"net/textproto"
 	"os"
 	"testing"
 
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -54,6 +48,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// [AI]
 func TestUploadFilesHandler(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -67,132 +62,141 @@ func TestUploadFilesHandler(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			e := echo.New()
 			_, fileHeaders := testutils.PrepareUploadTestFiles(t, tt.files)
 
-			// Create a buffer to write our multipart form data
-			body := &bytes.Buffer{}
-			writer := multipart.NewWriter(body)
+			// Call the handler
+			statusChan := make(chan processor.ProcessStatus)
+			// Start a goroutine to consume the messages from the channel
+			go func() {
+				for status := range statusChan {
+					// Just consume the messages - we don't need to do anything with them in this test
+					// Optionally log them if you want to see what's happening
+					t.Logf("Process status: %+v", status)
+				}
+			}()
+			var files []*os.File
+			ctxTest := context.TODO()
 
-			// Add each file to the multipart form data
-			for _, fileHeader := range fileHeaders {
-				src, err := fileHeader.Open()
+			for _, fh := range fileHeaders {
+				src, err := fh.Open()
+				require.NoError(t, err)
+				defer src.Close()
+
+				tmpFile, err := os.CreateTemp("", "upload-*")
 				require.NoError(t, err)
 
-				// Create form file field with content type header
-				h := make(textproto.MIMEHeader)
-				h.Set("Content-Disposition",
-					fmt.Sprintf(`form-data; name="files"; filename="%s"`, fileHeader.Filename))
-				h.Set("Content-Type", "text/csv")
-
-				part, err := writer.CreatePart(h)
+				_, err = io.Copy(tmpFile, src)
 				require.NoError(t, err)
 
-				// Copy file content to form file field
-				_, err = io.Copy(part, src)
+				// Rewind to the start for reading
+				_, err = tmpFile.Seek(0, 0)
 				require.NoError(t, err)
-				src.Close()
-
+				files = append(files, tmpFile)
 			}
 
-			// Close the multipart writer
-			err := writer.Close()
+			upload.ProcessFiles(ctxTest, files, statusChan, studentRepo, processor.StudentTestMapper)
+
+			// Check that files were processed and data is in the DB
+			students, _, err := studentRepo.Query([]repository.QueryOption{}, nil)
 			require.NoError(t, err)
 
-			// Create a request with the multipart form data
-			req := httptest.NewRequest(http.MethodPost, "/api/upload", body)
-			req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
-
-			// Create a response recorder
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
-
-			// Call the handler
-			err = upload.UploadHandlerWithoutWebsocket(c, studentRepo)
-			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, rec.Result().StatusCode, "Expected status code to be %d", http.StatusOK)
+			// Verify some data was inserted - we don't need to check the exact count
+			// as it would be brittle and dependent on the test files
+			assert.NotEmpty(t, students, "Expected students in the DB")
 
 		})
 	}
 }
 
-// [AI]
-func TestUploadFileHandlerWithInvalidTypes(t *testing.T) {
-	e := echo.New()
+func TestValidations(t *testing.T) {
+	t.Run("validate CSV files", func(t *testing.T) {
+		// Create a file with binary content (PNG signature) that will fail content type validation
+		invalidFile, err := os.CreateTemp("", "invalid-*.png")
+		require.NoError(t, err)
+		defer os.Remove(invalidFile.Name())
 
-	t.Run("invalid mime types", func(t *testing.T) {
-		// Create a buffer to write our multipart form data
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-
-		// Add a file with incorrect mime type
-		h := make(textproto.MIMEHeader)
-		h.Set("Content-Disposition", `form-data; name="files"; filename="invalid.txt"`)
-		h.Set("Content-Type", "text/plain") // Invalid mime type
-
-		part, err := writer.CreatePart(h)
+		// Write PNG header signature bytes to make it detect as image/png
+		pngSignature := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+		_, err = invalidFile.Write(pngSignature)
+		require.NoError(t, err)
+		_, err = invalidFile.WriteString("This is a fake PNG file to trigger content type validation")
 		require.NoError(t, err)
 
-		// Write some dummy content
-		part.Write([]byte("This is not a CSV file"))
+		// Rewind to the start
+		_, err = invalidFile.Seek(0, 0)
+		require.NoError(t, err)
 
-		// Close the writer
-		writer.Close()
+		// Call the validation function directly
+		err = upload.ValidateCSVFiles([]*os.File{invalidFile})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid content type")
+	})
 
-		// Create a request with the multipart form data
-		req := httptest.NewRequest(http.MethodPost, "/api/upload", body)
-		req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
+	t.Run("validate header", func(t *testing.T) {
+		// Create a file with invalid CSV header
+		badHeaderFile, err := os.CreateTemp("", "bad-headers-*.csv")
+		require.NoError(t, err)
+		defer os.Remove(badHeaderFile.Name())
 
-		// Create a response recorder
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		_, err = badHeaderFile.WriteString("wrong,header,format\n1,2,3\n")
+		require.NoError(t, err)
 
-		// Call the handler
-		err = upload.UploadHandlerWithoutWebsocket(c, studentRepo)
+		// Rewind to the start
+		_, err = badHeaderFile.Seek(0, 0)
+		require.NoError(t, err)
 
-		// Expect an error for invalid file type
-		if assert.Error(t, err) {
-			httpErr, ok := err.(*echo.HTTPError)
-			assert.True(t, ok)
-			assert.Equal(t, http.StatusBadRequest, httpErr.Code)
-			assert.Contains(t, httpErr.Message, config.ErrInvalidFileTypeHttp)
-		}
+		// Call the validation function directly
+		err = upload.ValidateCSVHeader([]*os.File{badHeaderFile})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid CSV header")
+	})
+}
+
+func TestUploadHandlerWithValidations(t *testing.T) {
+	// Create a channel to receive validation errors
+	statusChan := make(chan processor.ProcessStatus)
+	defer close(statusChan)
+
+	// Create mock files and test directly with ProcessFiles
+	t.Run("invalid content type", func(t *testing.T) {
+		// Create a file with binary content (PNG signature) that will fail content type validation
+		invalidFile, err := os.CreateTemp("", "invalid-*.png")
+		require.NoError(t, err)
+		defer os.Remove(invalidFile.Name())
+
+		// Write PNG header signature bytes to make it detect as image/png
+		pngSignature := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+		_, err = invalidFile.Write(pngSignature)
+		require.NoError(t, err)
+		_, err = invalidFile.WriteString("This is a fake PNG file to trigger content type validation")
+		require.NoError(t, err)
+
+		// Rewind to the start
+		_, err = invalidFile.Seek(0, 0)
+		require.NoError(t, err)
+
+		// Test the validation function directly
+		err = upload.ValidateCSVFiles([]*os.File{invalidFile})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid content type")
 	})
 
 	t.Run("invalid headers", func(t *testing.T) {
-		// Create a buffer to write our multipart form data
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
+		// Create a file with invalid CSV header
+		badHeaderFile, err := os.CreateTemp("", "bad-headers-*.csv")
+		require.NoError(t, err)
+		defer os.Remove(badHeaderFile.Name())
 
-		// Add file with valid mime type but invalid headers
-		h := make(textproto.MIMEHeader)
-		h.Set("Content-Disposition", `form-data; name="files"; filename="bad_headers.csv"`)
-		h.Set("Content-Type", "text/csv")
-
-		part, err := writer.CreatePart(h)
+		_, err = badHeaderFile.WriteString("wrong,header,format\n1,2,3\n")
 		require.NoError(t, err)
 
-		// Write invalid CSV content (with wrong headers)
-		part.Write([]byte("wrong,header,format\n1,2,3\n"))
+		// Rewind to the start
+		_, err = badHeaderFile.Seek(0, 0)
+		require.NoError(t, err)
 
-		writer.Close()
-
-		req := httptest.NewRequest(http.MethodPost, "/api/upload", body)
-		req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
-
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-
-		// Call the handler
-		err = upload.UploadHandlerWithoutWebsocket(c, studentRepo)
-
-		// Expect an error for invalid headers
-		if assert.Error(t, err) {
-			httpErr, ok := err.(*echo.HTTPError)
-			assert.True(t, ok)
-			assert.Equal(t, http.StatusBadRequest, httpErr.Code)
-			assert.Contains(t, httpErr.Message, config.ErrInvalidCSVCols)
-		}
+		// Test the validation function directly
+		err = upload.ValidateCSVHeader([]*os.File{badHeaderFile})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid CSV header")
 	})
-
 }

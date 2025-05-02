@@ -1,6 +1,7 @@
 package processor_test
 
 import (
+	"context"
 	"file-uploader/database/model"
 	"file-uploader/database/repository"
 	processor "file-uploader/internal/service/csv"
@@ -56,6 +57,8 @@ func TestCSVProcessor(t *testing.T) {
 		batchSize     = 1000
 	)
 
+	ctxTest := context.TODO()
+
 	t.Run("a valid local csv file", func(t *testing.T) {
 
 		filepath, err := Seeder.SeedStudentsCSV("test.csv", testFilesDir, recordsLength)
@@ -74,7 +77,7 @@ func TestCSVProcessor(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = processor.ProcessCSV(0, f, fileStat.Size(), batchSize, studentRepo, StudentTestMapper, status)
+			err = processor.ProcessCSV(ctxTest, 0, f, fileStat.Size(), batchSize, studentRepo, StudentTestMapper, status)
 			require.NoError(t, err)
 			close(status)
 		}()
@@ -100,7 +103,7 @@ func TestCSVProcessor(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = processor.ProcessCSV(0, src, size, batchSize, studentRepo, StudentTestMapper, status)
+			err = processor.ProcessCSV(ctxTest, 0, src, size, batchSize, studentRepo, StudentTestMapper, status)
 			require.NoError(t, err)
 			close(status)
 		}()

@@ -43,25 +43,25 @@ export default function Dashboard() {
   }, [page, pageSize, sortBy, sortOrder, name, subject]);
 
   return (
-    <main className="p-10 h-screen relative overflow-hidden selection:bg-teal-800 selection:text-teal-50">
-      <div className="w-full h-full gap-2.5 items-center justify-center flex">
-        <div className="h- h-full flex flex-col gap-2.5">
-          <div className=" flex flex-col gap-12 justify-center bg-teal-50/20 backdrop-blur-md border-teal-600 px-20 py-8 border rounded-4xl">
+    <main className="p-3 sm:p-5 md:p-8 lg:p-10 min-h-screen relative overflow-hidden selection:bg-teal-800 selection:text-teal-50">
+      <div className="w-full h-full gap-2 sm:gap-2.5 items-start lg:items-center justify-center flex flex-col lg:flex-row">
+        <div className="w-full lg:w-auto lg:h-full flex flex-col gap-2 sm:gap-2.5">
+          <div className="w-full flex flex-col gap-4 sm:gap-8 md:gap-12 justify-center bg-teal-50/20 backdrop-blur-md border-teal-600 px-4 sm:px-8 md:px-12 lg:px-20 py-4 sm:py-6 md:py-8 border rounded-2xl sm:rounded-4xl">
             <NameSearch />
           </div>
-          <div className="w-3xl overflow-auto h-full flex flex-col gap-12 justify-center bg-teal-50/20 backdrop-blur-md border-teal-600 p-2 border rounded-4xl">
+          <div className="w-full overflow-auto max-h-[50vh] lg:max-h-[70vh] flex flex-col gap-4 sm:gap-8 md:gap-12 justify-center bg-teal-50/20 backdrop-blur-md border-teal-600 p-2 border rounded-2xl sm:rounded-4xl">
             <StudentsTable records={records} />
           </div>
         </div>
 
-        <div className="h-full flex flex-col gap-12 bg-teal-50/20 backdrop-blur-md border-teal-600 px-10 py-8  border rounded-4xl">
+        <div className="w-full lg:w-auto lg:h-full mt-2 lg:mt-0 flex flex-col gap-4 sm:gap-8 md:gap-12 bg-teal-50/20 backdrop-blur-md border-teal-600 px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-6 md:py-8 border rounded-2xl sm:rounded-4xl">
           <Options
             numOfPages={Math.ceil(count / parseInt(pageSize as string))}
           />
         </div>
       </div>
       <BackgroundLeft className="absolute saturate-0 opacity-10 -z-10 -left-12 bottom-0 rotate-12" />
-      <BackgroundRight className="absolute -z-10 saturate-0  top-0 -right-36 rotate-12 opacity-16" />
+      <BackgroundRight className="absolute -z-10 saturate-0 top-0 -right-36 rotate-12 opacity-16" />
     </main>
   );
 }

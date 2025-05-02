@@ -81,16 +81,16 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full">
-      <h2 className="text-2xl font-bold font-nova text-black">Table Options</h2>
+    <div className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full">
+      <h2 className="text-xl sm:text-2xl font-bold font-nova text-black">Table Options</h2>
 
       {/* Sorting Section */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-teal-700">Sort By</h3>
-        <div className="flex flex-col gap-3">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-teal-700">Sort By</h3>
+        <div className="flex flex-col gap-2 sm:gap-3">
           <div className="w-full">
             <select
-              className="w-full px-4 py-2 rounded-xl border-2 border-teal-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-700 transition-all"
+              className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-teal-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-700 transition-all"
               onChange={handleSortBySelection}
             >
               <option value="">Select a column</option>
@@ -100,10 +100,10 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
             </select>
           </div>
 
-          <div className="flex gap-4 items-center">
-            <span className="text-sm text-gray-700">Sort Order:</span>
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
+            <span className="text-xs sm:text-sm text-gray-700">Sort Order:</span>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <input
                   type="radio"
                   name="sortOrder"
@@ -113,7 +113,7 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
                 />
                 <span>Ascending</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <input
                   type="radio"
                   name="sortOrder"
@@ -129,13 +129,13 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
       </div>
 
       {/* Filter by Subject */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-teal-700">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-teal-700">
           Filter by Subject
         </h3>
         <div className="w-full">
           <select
-            className="w-full px-4 py-2 rounded-xl border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
+            className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
             onChange={handleSubjectSelection}
           >
             <option value="">All Subjects</option>
@@ -149,13 +149,13 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
       </div>
 
       {/* Pagination Section */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-teal-700">Pagination</h3>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-700">Items per page:</span>
+      <div className="space-y-2 sm:space-y-3 md:space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold text-teal-700">Pagination</h3>
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+            <span className="text-xs sm:text-sm text-gray-700">Items per page:</span>
             <select
-              className="px-3 py-1 rounded-lg border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md sm:rounded-lg border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
               onChange={handleItemsPerPageSelection}
               defaultValue={100}
             >
@@ -167,30 +167,30 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
             </select>
           </div>
 
-          <div className="flex items-center justify-between mt-2 bg-white rounded-xl border-2 border-teal-700 p-2">
+          <div className="flex items-center justify-between mt-1 sm:mt-2 bg-white rounded-lg sm:rounded-xl border-2 border-teal-700 p-1 sm:p-2">
             <button
-              className="p-1 rounded-full hover:bg-teal-700/70 hover:cursor-pointer hover:text-white transition-all"
+              className="p-0.5 sm:p-1 rounded-full hover:bg-teal-700/70 hover:cursor-pointer hover:text-white transition-all"
               onClick={handlePrevPage}
             >
-              <ChevronLeft />
+              <ChevronLeft size={16} className="sm:size-auto" />
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <span>Page</span>
               <input
                 min="1"
                 value={page}
-                className="w-16 text-center rounded-lg border border-teal-700/70 py-1 focus:outline-none focus:ring-2 focus:ring-teal-700/70"
+                className="w-10 sm:w-16 text-center rounded-md sm:rounded-lg border border-teal-700/70 py-0.5 sm:py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-700/70"
                 onChange={handlePageChange}
               />
               <span>of {numOfPages}</span>
             </div>
 
             <button
-              className="p-1 rounded-full hover:bg-teal-700/70 hover:cursor-pointer hover:text-white transition-all"
+              className="p-0.5 sm:p-1 rounded-full hover:bg-teal-700/70 hover:cursor-pointer hover:text-white transition-all"
               onClick={handleNextPage}
             >
-              <ChevronRight />
+              <ChevronRight size={16} className="sm:size-auto" />
             </button>
           </div>
         </div>

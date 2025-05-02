@@ -295,11 +295,11 @@ export default function FileUpload() {
 
   return (
     <form
-      className="flex flex-col w-full max-w-2xl gap-4 justify-center items-center"
+      className="flex flex-col w-full max-w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl gap-3 sm:gap-4 justify-center items-center"
       onSubmit={handleSubmit}
       method="POST"
     >
-      <div className="w-full border border-gray-200 rounded-lg overflow-hidden bg-white/50 ">
+      <div className="w-full border border-gray-200 rounded-lg overflow-hidden bg-white/50">
         {/* Header section with upload area */}
         <div
           onClick={!uploadStatus.inProgress ? handleClick : undefined}
@@ -307,19 +307,19 @@ export default function FileUpload() {
           onDragOver={!uploadStatus.inProgress ? handleDragOver : undefined}
           onDragLeave={!uploadStatus.inProgress ? handleDragLeave : undefined}
           onDrop={!uploadStatus.inProgress ? handleDrop : undefined}
-          className={`w-full flex items-center justify-center p-6 border-b border-gray-200 transition-all
+          className={`w-full flex items-center justify-center p-3 sm:p-4 md:p-6 border-b border-gray-200 transition-all
             ${isDragging ? "bg-teal-50 border-teal-300" : "hover:bg-gray-100"}
             ${uploadStatus.inProgress ? "opacity-75" : "cursor-pointer"}`}
         >
           <div className="flex items-center">
-            <CloudUpload className="text-teal-600 mr-4" size={40} />
+            <CloudUpload className="text-teal-600 mr-2 sm:mr-3 md:mr-4" size={24} strokeWidth={1.5} />
             <div>
-              <h2 className="font-medium text-lg">
+              <h2 className="font-medium text-sm sm:text-base md:text-lg">
                 {uploadStatus.inProgress
                   ? `Uploading ${files.length} file${files.length !== 1 ? "s" : ""}...`
                   : "Choose files or drag & drop"}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 {uploadStatus.inProgress
                   ? `${uploadStatus.percent}% complete`
                   : "CSV format only, up to 1GB"}
@@ -349,19 +349,19 @@ export default function FileUpload() {
         )}
 
         {/* File list section */}
-        <div className="p-4">
+        <div className="p-2 sm:p-3 md:p-4">
           {uploadStatus.error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-800 rounded border border-red-200 flex items-start">
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-red-50 text-red-800 rounded border border-red-200 flex items-start">
               <AlertCircle
                 className="text-red-500 mr-2 flex-shrink-0 mt-0.5"
                 size={16}
               />
               <div className="flex-1">
-                <p className="text-sm font-medium">{uploadStatus.error}</p>
+                <p className="text-xs sm:text-sm font-medium">{uploadStatus.error}</p>
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm"
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-2 sm:px-3 rounded text-xs sm:text-sm"
                   disabled={files.length === 0 || uploadStatus.inProgress}
                 >
                   Retry Upload
@@ -371,9 +371,9 @@ export default function FileUpload() {
           )}
 
           {uploadStatus.completed && (
-            <div className="mb-4 p-3 bg-green-50 text-green-800 rounded border border-green-200 flex items-center">
-              <CheckCircle2 className="text-green-500 mr-2" size={18} />
-              <p className="text-sm font-medium">
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-green-50 text-green-800 rounded border border-green-200 flex items-center">
+              <CheckCircle2 className="text-green-500 mr-2" size={16} />
+              <p className="text-xs sm:text-sm font-medium">
                 All files uploaded successfully!
               </p>
             </div>
@@ -382,7 +382,7 @@ export default function FileUpload() {
           {files.length > 0 ? (
             <div>
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium text-sm text-gray-700">
+                <h3 className="font-medium text-xs sm:text-sm text-gray-700">
                   Files{" "}
                   {uploadStatus.inProgress &&
                     `(${uploadStatus.timeLeft ? formatTimeRemaining(uploadStatus.timeLeft) + " remaining" : "Processing..."})`}
@@ -390,14 +390,14 @@ export default function FileUpload() {
                 {!uploadStatus.inProgress && files.length > 0 && (
                   <button
                     type="submit"
-                    className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded-md transition-colors"
+                    className="text-[10px] sm:text-xs bg-teal-600 hover:bg-teal-700 text-white px-2 sm:px-3 py-1 rounded-md transition-colors"
                   >
                     Upload {files.length} file{files.length !== 1 ? "s" : ""}
                   </button>
                 )}
               </div>
 
-              <ul className="max-h-60 overflow-y-auto divide-y divide-gray-100">
+              <ul className="max-h-40 sm:max-h-48 md:max-h-60 overflow-y-auto divide-y divide-gray-100">
                 {files.map((file, index) => {
                   // Find matching status for this file if available
                   const fileStatus = Array.from(
@@ -405,15 +405,15 @@ export default function FileUpload() {
                   ).find(([id]) => id === index)?.[1];
 
                   return (
-                    <li key={index} className="py-2 flex items-center gap-3">
+                    <li key={index} className="py-1 sm:py-2 flex items-center gap-2 sm:gap-3">
                       <FileText
-                        size={18}
+                        size={16}
                         className="text-gray-400 flex-shrink-0"
                       />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
-                          <span className="truncate font-medium text-sm">
+                          <span className="truncate font-medium text-xs sm:text-sm">
                             {file.name}
                           </span>
                           {!uploadStatus.inProgress && (
@@ -422,7 +422,7 @@ export default function FileUpload() {
                               onClick={() => removeFile(index)}
                               className="text-red-500 hover:cursor-pointer p-1 hover:bg-red-50 rounded-full ml-2 flex-shrink-0"
                             >
-                              <X size={14} />
+                              <X size={12} />
                             </button>
                           )}
                         </div>
@@ -430,7 +430,7 @@ export default function FileUpload() {
                         {/* Show progress bar if this file is being processed */}
                         {fileStatus && (
                           <div className="mt-1">
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-[10px] sm:text-xs">
                               <div className="text-gray-500">
                                 {fileStatus.Percent >= 100 ? (
                                   <span className="text-green-600 font-medium">
@@ -467,7 +467,7 @@ export default function FileUpload() {
               </ul>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-4 sm:py-6 md:py-8 text-gray-500 text-xs sm:text-sm">
               <p>No files selected</p>
             </div>
           )}
@@ -477,7 +477,7 @@ export default function FileUpload() {
       {!uploadStatus.inProgress && !uploadStatus.completed && (
         <button
           type="submit"
-          className={`rounded-md px-8  font-medium border transition-colors text-lg py-2 w-full
+          className={`rounded-md px-4 sm:px-6 md:px-8 font-medium border transition-colors text-sm sm:text-base md:text-lg py-1.5 sm:py-2 w-full
             ${
               files.length > 0
                 ? "bg-teal-600 text-white hover:cursor-pointer hover:bg-teal-700 border-teal-700"
@@ -492,7 +492,7 @@ export default function FileUpload() {
       )}
       {uploadStatus.completed && (
         <Link
-          className="rounded-md px-8 bg-teal-600 text-white text-center hover:cursor-pointer hover:bg-teal-700 border-teal-700 font-medium border transition-colors text-lg py-2 w-full"
+          className="rounded-md px-4 sm:px-6 md:px-8 bg-teal-600 text-white text-center hover:cursor-pointer hover:bg-teal-700 border-teal-700 font-medium border transition-colors text-sm sm:text-base md:text-lg py-1.5 sm:py-2 w-full"
           to="/dashboard"
         >
           View Students Records &rarr;

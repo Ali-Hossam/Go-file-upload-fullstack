@@ -1,0 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Jua&family=Nova+Square&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-nova: "Nova Square", sans-serif;
+  --font-jua: "Jua";
+}

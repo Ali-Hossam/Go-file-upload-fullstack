@@ -18,9 +18,8 @@ func RegisterRoutes(e *echo.Echo, db *gorm.DB, studentsRepo repository.StudentRe
 
 	// Register routes
 	apiGroup := e.Group("/api")
-	apiGroup.POST("/upload", uploadHandler.Handle)
+	apiGroup.POST("/upload", uploadHandler.HandleFileUpload)
+	apiGroup.GET("/upload/status/:uploadID", uploadHandler.HandleStatusUpdates)
 
 	apiGroup.GET("/students", studentsHandler.GetAll)
-	apiGroup.GET("/students/name/:name", studentsHandler.GetByName)
-	apiGroup.GET("/students/subject/:subject", studentsHandler.FilterBySubject)
 }

@@ -121,10 +121,10 @@ func TestCreateMany(t *testing.T) {
 
 func TestGetByName(t *testing.T) {
 	cases := []struct {
-		name          string
-		studentsData  []*model.StudentTest
-		studentName   string
-		expectedError error
+		name           string
+		studentsData   []*model.StudentTest
+		studentName    string
+		expectedResult []*model.StudentTest
 	}{
 		{
 			name:         "get an existing student",
@@ -132,10 +132,10 @@ func TestGetByName(t *testing.T) {
 			studentName:  "unique_test_name",
 		},
 		{
-			name:          "get a non-existing student, should return error",
-			studentsData:  []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: string(config.Mathematics), Grade: 80}},
-			studentName:   "iam not here",
-			expectedError: config.ErrStudentNotExist,
+			name:           "get a non-existing student, should return error",
+			studentsData:   []*model.StudentTest{{Student_id: uuid.New(), Student_name: "unique_test_name", Subject: string(config.Mathematics), Grade: 80}},
+			studentName:    "iam not here",
+			expectedResult: []*model.StudentTest{},
 		},
 		{
 			name: "get multiple students with the same name",
@@ -148,16 +148,22 @@ func TestGetByName(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
+			testDB.Where("1=1").Delete(&model.StudentTest{})
+
 			err := studentRepo.CreateMany(tt.studentsData)
 			require.NoError(t, err)
 
-			students, err := studentRepo.GetByName(tt.studentName)
-			if tt.expectedError != nil {
-				assert.Equal(t, tt.expectedError, err)
+			students, count, err := studentRepo.Query(
+				[]repository.QueryOption{repository.WithNameFilter(tt.studentName)},
+				nil,
+			)
+
+			if tt.expectedResult != nil {
+				assert.Equal(t, tt.expectedResult, students)
 				return
 			}
 			assert.NoError(t, err)
-			assert.Len(t, students, len(tt.studentsData))
+			assert.Equal(t, int(count), len(tt.studentsData))
 
 			// Verify all returned students have the expected name
 			for _, student := range students {
@@ -240,8 +246,15 @@ func TestGetAllPagination(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			// Get the specified page
-			students, err := studentRepo.GetAll(tc.sortBy, tc.sortOrder, tc.pageNumber, tc.pageSize)
+			students, _, err := studentRepo.Query(
+				[]repository.QueryOption{
+					repository.WithSort(tc.sortBy, tc.sortOrder),
+					repository.WithPagination(tc.pageNumber, tc.pageSize),
+				},
+				nil,
+			)
 			assert.NoError(t, err)
 
 			// Check page size
@@ -313,7 +326,14 @@ func TestGetAll(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			allStudents, err := studentRepo.GetAll(tt.sortBy, tt.sortOrder, 1, 20) // Get all students
+			allStudents, _, err := studentRepo.Query(
+				[]repository.QueryOption{
+
+					repository.WithSort(tt.sortBy, tt.sortOrder),
+					repository.WithPagination(1, 20), // Get all students
+				},
+				nil,
+			)
 			assert.NoError(t, err)
 			assert.Len(t, allStudents, tt.expectedCount)
 
@@ -382,7 +402,13 @@ func TestFilterBySubject(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			students, err := studentRepo.FilterBySubject(tc.subject, tc.pageNumber, tc.pageSize)
+			students, _, err := studentRepo.Query(
+				[]repository.QueryOption{
+					repository.WithSubject(tc.subject),
+					repository.WithPagination(tc.pageNumber, tc.pageSize),
+				},
+				nil,
+			)
 			assert.NoError(t, err)
 
 			// Check result count

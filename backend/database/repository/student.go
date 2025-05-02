@@ -88,7 +88,7 @@ func (r *StudentRepo[T]) CreateMany(items []*T) error {
 	var errors []error
 
 	// Assign paritions to workers
-	for i := 0; i < maxConcurrent; i++ {
+	for i := range maxConcurrent {
 		wg.Add(1)
 
 		go func(workerID int) {
@@ -124,55 +124,64 @@ func (r *StudentRepo[T]) CreateMany(items []*T) error {
 	return nil
 }
 
-func (r *StudentRepo[T]) GetByName(name string) ([]*T, error) {
-	var students []*T
-	result := r.db.Where(string(config.Name)+" ILIKE ?", name+"%").Find(&students)
+func (r *StudentRepo[T]) Query(
+	opts []QueryOption,
+	paginationOpt QueryOption,
+) ([]*T, int64, error) {
 
-	if len(students) == 0 {
-		return students, config.ErrStudentNotExist
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
 	}
 
-	return students, result.Error
-}
-
-func (r *StudentRepo[T]) GetAll(
-	sortedBy config.StudentCol,
-	sortOrder config.SortOrder,
-	pageNumber int,
-	pageSize int) ([]*T, error) {
-
-	var students []*T
-	db := r.db
-
-	// Apply sorting if specified
-	if sortedBy != "" {
-		query := fmt.Sprintf("%s %s", sortedBy, sortOrder)
-		db = db.Order(query)
+	// Get total count before pagiantion
+	var totalCount int64
+	if err := db.Model(new(T)).Count(&totalCount).Error; err != nil {
+		return nil, 0, err
 	}
 
 	// Apply pagination
-	if pageNumber > 0 && pageSize > 0 {
-		db = db.Limit(pageSize).Offset((pageNumber - 1) * pageSize)
+	if paginationOpt != nil {
+		db = paginationOpt(db)
 	}
 
-	// Execute query
-	result := db.Find(&students)
-	return students, result.Error
-}
-
-func (r *StudentRepo[T]) FilterBySubject(subject config.Course, pageNumber int, pageSize int) ([]*T, error) {
 	var students []*T
-	db := r.db
-
-	if pageNumber > 0 && pageSize > 0 {
-		db = db.Limit(pageSize).Offset((pageNumber - 1) * pageSize)
-	}
-
-	result := db.Where(string(config.Subject)+" = ?", subject).Find(&students)
-
-	return students, result.Error
+	result := db.Find(&students)
+	return students, totalCount, result.Error
 }
 
-func (r *StudentRepo[T]) Delete(id uint) error {
-	return nil
+func WithSubject(subject config.Course) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if subject != "" {
+			return db.Where(string(config.Subject)+" = ?", subject)
+		}
+		return db
+	}
+}
+
+func WithSort(sortedBy config.StudentCol, order config.SortOrder) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if sortedBy != "" {
+			return db.Order(fmt.Sprintf("%s %s", sortedBy, order))
+		}
+		return db
+	}
+}
+
+func WithPagination(page, size int) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if page > 0 && size > 0 {
+			return db.Offset((page - 1) * size).Limit(size)
+		}
+		return db
+	}
+}
+
+func WithNameFilter(name string) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if name != "" {
+			return db.Where(string(config.Name)+" ILIKE ?", name+"%")
+		}
+		return db
+	}
 }

@@ -5,7 +5,7 @@ type SortOrder string
 type Course string
 
 const (
-	DBEnvVar   = "DB_DSN"
+	DBEnvVar   = "DB_DSN_LOCAL"
 	PortEnvVar = "SERVER_PORT"
 
 	Id      StudentCol = "Student_id"
@@ -27,5 +27,5 @@ const (
 	Music       Course = "Music"
 	Geography   Course = "Geography"
 
-	StudentsTableHeader = string(Id) + "," + string(Name) + "," + string(Subject) + "," + string(Grade)
+	StudentsTableHeader = "student_id,student_name,subject,grade"
 )

@@ -1,54 +1,108 @@
-# React + TypeScript + Vite
+# GoSheet Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive React application for uploading and managing CSV data using the GoSheet backend.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Drag and drop file uploading with real-time progress indicators
+- CSV validation on client-side
+- WebSocket connection for live upload status updates
+- Data visualization with filtering, sorting, and pagination
+- Mobile-responsive design with modern UI
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19
+- TypeScript
+- Vite 6
+- Tailwind CSS 4
+- React Router
+- Lucide React for icons
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Prerequisites
+
+- Node.js (v18+ recommended)
+- Bun, npm, or Yarn package manager
+
+## Environment Setup
+
+Create a `.env` file in the root directory with:
+
+```
+VITE_SERVER_URL=localhost:8080
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Adjust the server URL to match your backend deployment.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Installation
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+# Install dependencies
+bun install
+# or npm install
+# or yarn install
 ```
+
+## Development
+
+```bash
+# Start development server
+bun dev
+# or npm run dev
+# or yarn dev
+```
+
+This will start a local development server at http://localhost:5173.
+
+## Building for Production
+
+```bash
+# Build for production
+bun run build
+# or npm run build
+# or yarn build
+```
+
+The build output will be in the `dist` directory.
+
+## Project Structure
+
+```
+frontend/
+├── public/               # Static assets
+├── src/                  # Source code
+│   ├── assets/           # Images, fonts, etc.
+│   ├── components/       # Reusable UI components
+│   ├── pages/            # Page components
+│   ├── types/            # TypeScript type definitions
+│   ├── App.tsx           # Main application component
+│   ├── index.css         # Global styles
+│   └── main.tsx          # Application entry point
+├── .env                  # Environment variables
+├── index.html            # HTML template
+├── package.json          # Project dependencies
+├── tsconfig.json         # TypeScript configuration
+└── vite.config.ts        # Vite configuration
+```
+
+## Key Components
+
+- **FileUpload**: Handles CSV file uploading with real-time progress indicators via WebSockets
+- **StudentsTable**: Displays uploaded student records
+- **Options**: Controls for filtering, sorting, and pagination
+- **NameSearch**: Search component for filtering records by student name
+
+## Usage
+
+1. Upload CSV files using the drag-and-drop area or file browser
+2. View real-time upload progress
+3. Browse records on the dashboard
+4. Use filters, sorting, and pagination to navigate the data
+
+## Deployment
+
+The application can be deployed to any static hosting service:
+
+1. Build the project with `bun run build`
+2. Upload the contents of the `dist` directory to your hosting provider
+3. Configure your server to handle client-side routing (if applicable)

@@ -35,10 +35,16 @@ func TestGetAll(t *testing.T) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 
 			// unmarshal response
-			var students []model.StudentTest
-			err := json.Unmarshal(rec.Body.Bytes(), &students)
+			var response struct {
+				Count   int64               `json:"count"`
+				Records []model.StudentTest `json:"records"`
+			}
+
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, data, students)
+			assert.Equal(t, data, response.Records)
+			assert.Equal(t, int64(len(data)), response.Count)
+
 		}
 	})
 

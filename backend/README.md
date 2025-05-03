@@ -56,16 +56,6 @@ go run cmd/app/main.go
 
 This will start the server on port 8080 (or the port specified in your `.env`).
 
-## Building for Production
-
-```bash
-# Build the application
-go build -o gosheet-server cmd/app/main.go
-
-# Run the compiled binary
-./gosheet-server
-```
-
 ## API Endpoints
 
 ### File Upload

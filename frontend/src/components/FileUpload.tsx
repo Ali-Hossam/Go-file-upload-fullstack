@@ -61,8 +61,11 @@ export default function FileUpload() {
     // Extract server URL without protocol
     const serverUrl = import.meta.env.VITE_SERVER_URL;
 
+    // Replace http or https with ws
+    const wsUrl = serverUrl.replace(/^https?:\/\//, "ws://");
+
     // Establish WebSocket connection
-    const ws = new WebSocket(`ws://${serverUrl}/api/upload/status/${statusId}`);
+    const ws = new WebSocket(`${wsUrl}api/upload/status/${statusId}`);
 
     ws.onopen = () => {
       console.log("WebSocket connection established");
@@ -248,7 +251,7 @@ export default function FileUpload() {
       // Extract server URL without protocol if it exists
       const serverUrl = import.meta.env.VITE_SERVER_URL;
 
-      const apiUrl = `http://${serverUrl}/api/upload`;
+      const apiUrl = `${serverUrl}api/upload`;
 
       console.log("Sending upload to:", apiUrl);
       console.log(
@@ -312,7 +315,11 @@ export default function FileUpload() {
             ${uploadStatus.inProgress ? "opacity-75" : "cursor-pointer"}`}
         >
           <div className="flex items-center">
-            <CloudUpload className="text-teal-600 mr-2 sm:mr-3 md:mr-4" size={24} strokeWidth={1.5} />
+            <CloudUpload
+              className="text-teal-600 mr-2 sm:mr-3 md:mr-4"
+              size={24}
+              strokeWidth={1.5}
+            />
             <div>
               <h2 className="font-medium text-sm sm:text-base md:text-lg">
                 {uploadStatus.inProgress
@@ -357,7 +364,9 @@ export default function FileUpload() {
                 size={16}
               />
               <div className="flex-1">
-                <p className="text-xs sm:text-sm font-medium">{uploadStatus.error}</p>
+                <p className="text-xs sm:text-sm font-medium">
+                  {uploadStatus.error}
+                </p>
                 <button
                   type="button"
                   onClick={handleSubmit}
@@ -405,7 +414,10 @@ export default function FileUpload() {
                   ).find(([id]) => id === index)?.[1];
 
                   return (
-                    <li key={index} className="py-1 sm:py-2 flex items-center gap-2 sm:gap-3">
+                    <li
+                      key={index}
+                      className="py-1 sm:py-2 flex items-center gap-2 sm:gap-3"
+                    >
                       <FileText
                         size={16}
                         className="text-gray-400 flex-shrink-0"

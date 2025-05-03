@@ -33,7 +33,7 @@ export default function Dashboard() {
       subject.charAt(0).toUpperCase() + subject.slice(1);
 
     fetch(
-      `http://${serverUrl}/api/students?page=${page}&size=${pageSize}&sort_by=${capitalizedSortBy}&sort_order=${sortOrderSmallCase}&name=${name}&subject=${capitalizedSubject}`,
+      `${serverUrl}api/students?page=${page}&size=${pageSize}&sort_by=${capitalizedSortBy}&sort_order=${sortOrderSmallCase}&name=${name}&subject=${capitalizedSubject}`,
     )
       .then((response) => response.json())
       .then((data) => {

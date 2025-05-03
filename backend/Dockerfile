@@ -32,7 +32,5 @@ ENV GO_ENV=production
 # Expose port
 EXPOSE 8080
 
-COPY .env .
-
 # Run the application
 CMD ["./main"]

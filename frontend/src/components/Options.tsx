@@ -82,11 +82,15 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full">
-      <h2 className="text-xl sm:text-2xl font-bold font-nova text-black">Table Options</h2>
+      <h2 className="text-xl sm:text-2xl font-bold font-nova text-black">
+        Table Options
+      </h2>
 
       {/* Sorting Section */}
       <div className="space-y-2 sm:space-y-3 md:space-y-4">
-        <h3 className="text-base sm:text-lg font-semibold text-teal-700">Sort By</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-teal-700">
+          Sort By
+        </h3>
         <div className="flex flex-col gap-2 sm:gap-3">
           <div className="w-full">
             <select
@@ -101,7 +105,9 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
           </div>
 
           <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
-            <span className="text-xs sm:text-sm text-gray-700">Sort Order:</span>
+            <span className="text-xs sm:text-sm text-gray-700">
+              Sort Order:
+            </span>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <input
@@ -135,7 +141,7 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
         </h3>
         <div className="w-full">
           <select
-            className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
+            className="w-full bg-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
             onChange={handleSubjectSelection}
           >
             <option value="">All Subjects</option>
@@ -150,12 +156,16 @@ export default function Options({ numOfPages }: { numOfPages: number }) {
 
       {/* Pagination Section */}
       <div className="space-y-2 sm:space-y-3 md:space-y-4">
-        <h3 className="text-base sm:text-lg font-semibold text-teal-700">Pagination</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-teal-700">
+          Pagination
+        </h3>
         <div className="flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center flex-wrap gap-2 sm:gap-3">
-            <span className="text-xs sm:text-sm text-gray-700">Items per page:</span>
+            <span className="text-xs sm:text-sm text-gray-700">
+              Items per page:
+            </span>
             <select
-              className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md sm:rounded-lg border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
+              className="px-2 sm:px-3 bg-white py-1 text-xs sm:text-sm rounded-md sm:rounded-lg border-2 border-teal-700 transition-all focus:outline-none focus:ring-2 focus:ring-teal-700"
               onChange={handleItemsPerPageSelection}
               defaultValue={100}
             >

@@ -6,6 +6,9 @@ This project is a full-stack application for uploading, processing, and displayi
 
 1. A Go backend for handling file uploads, processing CSV data, and providing a RESTful API
 2. A React frontend for file upload with real-time progress tracking and data visualization
+   
+![Screenshot 2025-05-03 08-40-29](https://github.com/user-attachments/assets/c174b50c-467e-4596-94f0-6a79cd83e18a)
+![Screenshot 2025-05-03 08-40-07](https://github.com/user-attachments/assets/a186baca-84ff-446a-9d90-6f089252994e)
 
 ## Features
 

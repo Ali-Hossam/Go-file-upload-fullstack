@@ -17,7 +17,7 @@ func main() {
 	// Load environment variables
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("Error loading .env file: %v", err) // Use fatalf in local environment
 	}
 
 	// Get database connection string
